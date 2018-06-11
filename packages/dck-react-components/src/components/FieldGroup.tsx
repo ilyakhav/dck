@@ -21,15 +21,26 @@ export interface FieldGroupProps {
   onFocus?: () => void;
   onChange?: (e: any) => void;
   value?: any;
+  validationDebounceTimeout?: number
 }
 
 export class FieldGroup extends React.Component<FieldGroupProps, any> {
   public static defaultProps = {
     type: "text",
+    validationDebounceTimeout: 1500,
   };
 
+  constructor(props: any) {
+    super(props);
+
+    this.state = {
+      showValidation: null,
+      validationTimeout: null
+    };
+  }
+
   public getValidationState(validation: any) {
-    if (!validation) {
+    if (!validation || this.state.showValidation === false) {
       return null;
     }
 
@@ -39,6 +50,19 @@ export class FieldGroup extends React.Component<FieldGroupProps, any> {
       return "error";
     }
   }
+
+  onChange = (e: any) => {
+    this.setState({showValidation: !!(this.props.validationState && this.props.validationState.valid)});
+
+    if (!this.state.validationTimeout) {
+      let timeout = setTimeout(() => {
+          this.setState({showValidation: true});
+          this.setState({validationTimeout: null});
+      }, this.props.validationDebounceTimeout);
+      this.setState({validationTimeout: timeout});
+    }
+    this.props.onChange(e);
+  };
 
   public render() {
     return (
@@ -53,7 +77,7 @@ export class FieldGroup extends React.Component<FieldGroupProps, any> {
         
         <FormControl
           onFocus={this.props.onFocus}
-          onChange={this.props.onChange}
+          onChange={this.onChange}
           type={this.props.type}
           placeholder={this.props.placeholder}
           value={this.props.value}
@@ -62,7 +86,8 @@ export class FieldGroup extends React.Component<FieldGroupProps, any> {
         
         {" "}
         {this.props.help && <HelpBlock>{this.props.help}</HelpBlock>}
-        {this.props.validationMessage &&
+        {this.state.showValidation &&
+        this.props.validationMessage &&
         this.props.validationState &&
         !this.props.validationState.valid ? (
           <HelpBlock>
